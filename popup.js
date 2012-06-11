@@ -54,21 +54,21 @@
 			adboxBackground.style.opacity = adboxBackgroundFinalOpacity;
 			adboxBackground.style.filter='alpha(opacity='+adboxBackgroundFinalOpacity*100+')';
 			adboxPopup.style.opacity = 1;
-			adboxPopup.style.filter='alpha(opacity=100)';
-			if (adboxMsie6 || adboxMsie7 || adboxMsie8){	
-				adboxPopup.style.filter = '';
-			}
-			document.getElementById('adboxCloseImgButton').onclick = adboxClose;
+			adboxPopup.style.filter='';
+			if (adboxMsie6 || adboxMsie7 || adboxMsie8) adboxImg.style.display = 'block';
+			adboxImg.onclick = adboxClose;
 			adboxBackground.onclick = adboxClose;
 			var expires = new Date(); // получаем текущую дату
 			expires.setTime(expires.getTime() + 86400000);
-			adboxSetCookie('adboxKey', true, expires);
+			//adboxSetCookie('adboxKey', true, expires);
 		}
 	}
 
 	// функция исчезания
 	function adboxClose()
 	{
+		if (adboxMsie6 || adboxMsie7 || adboxMsie8) adboxImg.style.display = 'none';
+		
 		var adboxPopupOpacity = Number(adboxPopup.style.opacity) - adboxPopupParam;
 		if (adboxPopupOpacity<0) adboxPopupOpacity = 0;
 		adboxPopup.style.opacity = adboxPopupOpacity;
@@ -148,7 +148,7 @@
 			if (adboxMsie6) adboxBackground.style.position = 'absolute';
 			else adboxBackground.style.position = 'fixed';
 			adboxBackground.style.zIndex = '99997';
-			document.body.appendChild(adboxBackground);
+			document.getElementsByTagName('body')[0].appendChild(adboxBackground);
 			adboxBackground.style.display = 'block';
 			adboxBackground.style.opacity = 0;
 			adboxBackground.style.filter='alpha(opacity=0)';
@@ -171,14 +171,13 @@
 			adboxPopup.style.left = '50%';
 			adboxPopup.style.top = '50%';
 			adboxPopup.style.zIndex = '99998';
-			document.body.appendChild(adboxPopup);
+			document.getElementsByTagName('body')[0].appendChild(adboxPopup);
 			adboxPopup.style.display = 'block';
 			adboxPopup.style.opacity = 0;
 			adboxPopup.style.filter='alpha(opacity=0)';
 
 			// создание элемента крестика
 			var adboxImg = document.createElement('div');
-			adboxImg.id='adboxCloseImgButton';
 			adboxImg.style.padding = 0;
 			adboxImg.style.width = '44px';
 			adboxImg.style.height = '44px';
@@ -189,13 +188,9 @@
 			adboxImg.style.right = '0';
 			adboxImg.style.zIndex = '99999';
 			adboxImg.style.backgroundImage = 'url(http://www.wallpapers.ru/close_pop.png)';
-			/*if (adboxMsie6 || adboxMsie7 || adboxMsie8)
-			{
-				adboxImg.style.marginTop = '-8px';
-				adboxImg.style.marginRight = '-9px';
-			}*/
 			adboxImg.style.cursor = 'pointer';
-			adboxPopup.appendChild(adboxImg);
+			if (adboxMsie6 || adboxMsie7 || adboxMsie8) adboxImg.style.display = 'none';
+			adboxImg = adboxPopup.appendChild(adboxImg);
 			
 			// функция обработки нажатия на баннер
 			var adboxContainer = document.createElement('div');
