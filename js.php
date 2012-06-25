@@ -1,27 +1,52 @@
-(function()
+<?php
+//Функции для работы с БД
+function getQuery($query)
+{
+	$res = mysql_query($query) or die(mysql_error());
+	$row = mysql_fetch_array($res);
+	return $row;
+}
+ 
+function setQuery($query)
+{
+	$res = mysql_query($query) or die(mysql_error());
+	return $res;
+}
+//Если передан URL
+if (isset($_GET['url']))
+{
+	//Получаем хостнейм
+	preg_match('/^.*?\/\/(.*?)\/.*/' ,iconv('WINDOWS-1251' , 'UTF-8' , htmlspecialchars($_GET['url'])), $hostname);
+	if (preg_match('/^www\.(.*)/' ,$hostname[1], $matches))	 $hostname = $matches[1];
+	else $hostname = $hostname[1];
+	//Подключаемся к базе
+	@mysql_connect('db36.valuehost.ru', 'zanzibar2_adbo', '123456') or die("Не могу соединиться с MySQL.");
+	@mysql_select_db('zanzibar2_adbo') or die("Не могу подключиться к базе.");
+	//Присоединяем все ордеры к сайту, потом ко всем ордерам присоединяем боксы, потом ищем по условиям
+	$res = getQuery('SELECT orders.id, boxes.src, boxes.href, boxes.alt
+					FROM sites
+					LEFT JOIN orders
+					ON sites.id = orders.site_id
+					LEFT JOIN boxes
+					ON boxes.id = orders.box_id
+					WHERE sites.hostname = "'.mysql_real_escape_string($hostname).'" AND ((orders.clicks_limit IS NOT NULL AND orders.clicks_limit>orders.clicks_count) OR (orders.views_limit IS NOT NULL AND orders.views_limit>orders.views_count) OR (orders.end_time IS NOT NULL AND orders.end_time>NOW()))
+					ORDER BY orders.date
+					;');
+	if ($res)
+	{
+		//Ищем имя картинки в файловой системе
+		preg_match('/http:\/\/.*?\/(.*)/', $res['src'], $matches);
+		//Получаем её разрешение
+		$resol=getimagesize(dirname(dirname(__FILE__)).'/'.$matches[1]);
+		//Выводим текст скрипта
+		echo
+"(function()
 {
 	// Время появления/исчезания
-	var adboxShowTime = 300;
+	var adboxviewTime = 300;
 	// Прозрачность фона в итоге
 	var adboxBackgroundFinalOpacity = 0.8;
 
-	// асинхронная загрузка, вставлять на страницу, адрес скрипта пишется в s.src
-	/*<script type="text/javascript">
-	(function (d, w)
-	{
-		var n = d.getElementsByTagName('script')[0],
-		s = d.createElement('script'),
-		f = function ()
-		{
-			n.parentNode.insertBefore(s, n);
-		};
-		s.type = 'text/javascript';
-		s.async = true;
-		s.src = 'http://www.wallpapers.ru/popup.js';
-		if (w.opera == "[object Opera]") d.addEventListener("DOMContentLoaded", f);
-		else f();
-	})(document, window);
-	</script>*/
 
 	// определение 6, 7 и 8 осла
 	if (!window._ua)
@@ -34,11 +59,11 @@
 	else var adboxMsie8 = (/msie 8/i.test(window._ua) && !/opera/i.test(window._ua));
 
 	// расчёт коэффициентов для функций
-	var adboxBackgroundParam = adboxBackgroundFinalOpacity/(adboxShowTime/50);
-	var adboxPopupParam = 1/(adboxShowTime/50);
+	var adboxBackgroundParam = adboxBackgroundFinalOpacity/(adboxviewTime/50);
+	var adboxPopupParam = 1/(adboxviewTime/50);
 
 	// функция появления
-	function adboxShow()
+	function adboxview()
 	{
 		var adboxBackgroundOpacity = Number(adboxBackground.style.opacity) + adboxBackgroundParam;
 		adboxBackground.style.opacity = adboxBackgroundOpacity;
@@ -48,7 +73,7 @@
 		adboxPopup.style.opacity = adboxPopupOpacity;
 		adboxPopup.style.filter='alpha(opacity='+adboxPopupOpacity*100+')';
 		
-		if (adboxPopupOpacity<1) window.setTimeout(function(){adboxShow()}, 50);
+		if (adboxPopupOpacity<1) window.setTimeout(function(){adboxview()}, 50);
 		else
 		{
 			adboxBackground.style.opacity = adboxBackgroundFinalOpacity;
@@ -60,7 +85,7 @@
 			adboxBackground.onclick = adboxClose;
 			var expires = new Date(); // получаем текущую дату
 			expires.setTime(expires.getTime() + 86400000);
-			//adboxSetCookie('adboxKey', true, expires);
+			adboxSetCookie('adboxKey', true, expires);
 		}
 	}
 
@@ -100,6 +125,7 @@
 		var cookie_name = name + '=';
 		var cookie_length = document.cookie.length;
 		var cookie_begin = 0;
+		var value_begin;
 		while (cookie_begin < cookie_length)
 		{
 			value_begin = cookie_begin + cookie_name.length;
@@ -122,7 +148,7 @@
 	if (adboxKey==null || !adboxKey)
 	{
 		// получаем контент
-		var adboxContent = '<div style="font: 20px Arial, sans-serif; text-align: center;"><a href="http://www.anapatur79.ru/" target="_blank" style="color: #00F;"><img src="http://www.anapamix.ru/1.jpg" width="200" height="133"><img src="http://www.anapamix.ru/2.jpg" width="200" height="133"><img src="http://www.anapamix.ru/3.jpg" width="200" height="133"><div style="padding-top: 5px;">Размещение в 3-х этажном коттедже Анапы без посредников</div></a></div>';
+		var adboxContent = '<a href=\"".$res['href']."\" target=\"_blank\"><img src=\"".$res['src']."\" width=\"".$resol[0]."\" height=\"".$resol[1]."\" alt=\"".$res['alt']."\" /></a>';
 		
 		// если есть, что показать
 		if (adboxContent)
@@ -203,7 +229,11 @@
 			adboxPopup.style.marginTop = -Math.round(adboxPopup.offsetHeight/2)+'px';
 
 			// ну, с бохом
-			window.setTimeout(function(){adboxShow()}, 800);
+			window.setTimeout(function(){adboxview()}, 800);
 		}
 	}
 })();
+";
+	}
+}
+?>
