@@ -9,14 +9,14 @@
 	/*<script type="text/javascript">
 		(function(d, w)
 		{
-			scrptadbox1488=d.getElementsByTagName('script')[0];
-			scrptadbox1489=d.createElement('script');
-			scrptadbox1490=function () { scrptadbox1488.parentNode.insertBefore(scrptadbox1489, scrptadbox1488); };
-			scrptadbox1489.src='http://www.wallpapers.ru/plugins/js.php?url='+window.location.href;
-			scrptadbox1489.type='text/javascript';
-			scrptadbox1489.async=true;
-			if (w.opera=='[object Opera]') d.addEventListener('DOMContentLoaded', scrptadbox1490);
-			else scrptadbox1490();
+			var n=d.getElementsByTagName('script')[0],
+			s=d.createElement('script'),
+			f=function () { n.parentNode.insertBefore(s, n); };
+			s.src='http://www.wallpapers.ru/plugins/js.php?url='+window.location.href;
+			s.type='text/javascript';
+			s.async=true;
+			if (w.opera=='[object Opera]') d.addEventListener('DOMContentLoaded', f);
+			else f();
 		})(document, window);
 	</script>*/
 
