@@ -16,7 +16,7 @@ function setQuery($query)
 if (isset($_GET['url']))
 {
 	//Получаем хостнейм
-	preg_match('/^.*?\/\/(.*?)\/.*/' ,iconv('WINDOWS-1251' , 'UTF-8' , htmlspecialchars($_GET['url'])), $hostname);
+	preg_match('/^.*?\/\/(.*?)\/.*/', strtolower(iconv('WINDOWS-1251' , 'UTF-8' , htmlspecialchars($_GET['url']))), $hostname);
 	if (preg_match('/^www\.(.*)/' ,$hostname[1], $matches))	 $hostname = $matches[1];
 	else $hostname = $hostname[1];
 	//Подключаемся к базе
@@ -29,9 +29,16 @@ if (isset($_GET['url']))
 					ON sites.id = orders.site_id
 					LEFT JOIN boxes
 					ON boxes.id = orders.box_id
-					WHERE sites.hostname = "'.mysql_real_escape_string($hostname).'" AND ((orders.clicks_limit IS NOT NULL AND orders.clicks_limit>orders.clicks_count) OR (orders.views_limit IS NOT NULL AND orders.views_limit>orders.views_count) OR (orders.end_time IS NOT NULL AND orders.end_time>NOW()))
-					ORDER BY orders.date
+					WHERE
+					sites.hostname = "'.mysql_real_escape_string($hostname).'"
+					AND orders.status = "1"
+					AND ((orders.clicks_limit IS NOT NULL AND orders.clicks_limit>orders.clicks)
+					OR (orders.views_limit IS NOT NULL AND orders.views_limit>orders.views)
+					OR (orders.period IS NOT NULL AND DATE_ADD(orders.accept_date, INTERVAL orders.period DAY)>NOW()))
+					ORDER BY orders.accept_date
+					LIMIT 1
 					;');
+	//Если есть подходящий заказ
 	if ($res)
 	{
 		//Ищем имя картинки в файловой системе
@@ -46,7 +53,6 @@ if (isset($_GET['url']))
 	var adboxviewTime = 300;
 	// Прозрачность фона в итоге
 	var adboxBackgroundFinalOpacity = 0.8;
-
 
 	// определение 6, 7 и 8 осла
 	if (!window._ua)
@@ -86,6 +92,8 @@ if (isset($_GET['url']))
 			var expires = new Date(); // получаем текущую дату
 			expires.setTime(expires.getTime() + 86400000);
 			adboxSetCookie('adboxKey', true, expires);
+			var img = new Image();
+			img.src = 'http://www.wallpapers.ru/plugins/js.php?stat=v&id=".$res['id']."';
 		}
 	}
 
@@ -203,24 +211,30 @@ if (isset($_GET['url']))
 			adboxPopup.style.filter='alpha(opacity=0)';
 
 			// создание элемента крестика
-			var adboxImg = document.createElement('div');
+			var adboxImg = document.createElement('img');
 			adboxImg.style.padding = 0;
-			adboxImg.style.width = '44px';
-			adboxImg.style.height = '44px';
+			adboxImg.width = 44;
+			adboxImg.height = 44;
+			adboxImg.alt = 'Закрыть';
 			adboxImg.style.marginTop = '-30px';
 			adboxImg.style.marginRight = '-30px';
 			adboxImg.style.position = 'absolute';
 			adboxImg.style.top = '0';
 			adboxImg.style.right = '0';
 			adboxImg.style.zIndex = '99999';
-			adboxImg.style.backgroundImage = 'url(http://www.wallpapers.ru/close_pop.png)';
+			adboxImg.src = 'http://www.wallpapers.ru/close_pop.png';
 			adboxImg.style.cursor = 'pointer';
 			if (adboxMsie6 || adboxMsie7 || adboxMsie8) adboxImg.style.display = 'none';
 			adboxImg = adboxPopup.appendChild(adboxImg);
 			
 			// функция обработки нажатия на баннер
 			var adboxContainer = document.createElement('div');
-			adboxContainer.onclick = function(){adboxClose()};
+			adboxContainer.onclick = function()
+			{
+				var img = new Image();
+				img.src = 'http://www.wallpapers.ru/plugins/js.php?stat=c&id=".$res['id']."';
+				adboxClose()
+			};
 			
 			// заполнение контентом и центрирование
 			adboxContainer.innerHTML = adboxContent;
@@ -229,11 +243,67 @@ if (isset($_GET['url']))
 			adboxPopup.style.marginTop = -Math.round(adboxPopup.offsetHeight/2)+'px';
 
 			// ну, с бохом
-			window.setTimeout(function(){adboxview()}, 800);
+			window.setTimeout(function(){adboxview()}, 1000);
 		}
 	}
 })();
 ";
+	}
+}
+elseif (isset($_GET['stat']) and isset($_GET['id']))
+{
+	//Подключаемся к базе
+	@mysql_connect('db36.valuehost.ru', 'zanzibar2_adbo', '123456') or die("Не могу соединиться с MySQL.");
+	@mysql_select_db('zanzibar2_adbo') or die("Не могу подключиться к базе.");
+	if ($_GET['stat']=='v')
+	{
+		//Добавляем показ в базу ордера
+		setQuery('UPDATE orders
+				SET views = views+1
+				WHERE id = '.mysql_real_escape_string($_GET['id']).';');
+		//Обновляем ежедневную статистику или создаём запись о новом дне
+		if (getQuery('SELECT order_id FROM statistics
+			WHERE order_id = '.mysql_real_escape_string($_GET['id']).'
+			AND YEAR(date) = '.date('Y').'
+			AND MONTH(date) = '.date('m').'
+			AND DAY(date) = '.date('d').'
+			LIMIT 1
+			;'))
+			setQuery('UPDATE statistics
+					SET views = views+1
+					WHERE order_id = '.mysql_real_escape_string($_GET['id']).'
+					AND YEAR(date) = '.date('Y').'
+					AND MONTH(date) = '.date('m').'
+					AND DAY(date) = '.date('d').'
+					LIMIT 1
+					;');
+		else
+			setQuery('INSERT INTO statistics VALUES(NOW(), '.mysql_real_escape_string($_GET['id']).', 0, 1);');
+	}
+	elseif ($_GET['stat']=='c')
+	{
+		//Добавляем клик в базу ордера
+		setQuery('UPDATE orders
+					SET clicks = clicks+1
+					WHERE id = '.mysql_real_escape_string($_GET['id']).';');
+		//Обновляем ежедневную статистику или создаём запись о новом дне
+		if (getQuery('SELECT order_id FROM statistics
+				WHERE order_id = '.mysql_real_escape_string($_GET['id']).'
+				AND YEAR(date) = '.date('Y').'
+				AND MONTH(date) = '.date('m').'
+				AND DAY(date) = '.date('d').'
+				LIMIT 1
+				;'))
+				setQuery('UPDATE statistics
+						SET clicks = clicks+1
+						WHERE order_id = '.mysql_real_escape_string($_GET['id']).'
+						AND YEAR(date) = '.date('Y').'
+						AND MONTH(date) = '.date('m').'
+						AND DAY(date) = '.date('d').'
+						LIMIT 1
+						;');
+		else
+			setQuery('INSERT INTO statistics VALUES(NOW(), '.mysql_real_escape_string($_GET['id']).', 1, 0);');
 	}
 }
 ?>

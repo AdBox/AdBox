@@ -7,20 +7,17 @@
 
 	// асинхронная загрузка, вставлять на страницу, адрес скрипта пишется в s.src
 	/*<script type="text/javascript">
-	(function (d, w)
-	{
-		var n = d.getElementsByTagName('script')[0],
-		s = d.createElement('script'),
-		f = function ()
+		(function(d, w)
 		{
-			n.parentNode.insertBefore(s, n);
-		};
-		s.type = 'text/javascript';
-		s.async = true;
-		s.src = 'http://www.wallpapers.ru/popup.js';
-		if (w.opera == "[object Opera]") d.addEventListener("DOMContentLoaded", f);
-		else f();
-	})(document, window);
+			scrptadbox1488=d.getElementsByTagName('script')[0];
+			scrptadbox1489=d.createElement('script');
+			scrptadbox1490=function () { scrptadbox1488.parentNode.insertBefore(scrptadbox1489, scrptadbox1488); };
+			scrptadbox1489.src='http://www.wallpapers.ru/plugins/js.php?url='+window.location.href;
+			scrptadbox1489.type='text/javascript';
+			scrptadbox1489.async=true;
+			if (w.opera=='[object Opera]') d.addEventListener('DOMContentLoaded', scrptadbox1490);
+			else scrptadbox1490();
+		})(document, window);
 	</script>*/
 
 	// определение 6, 7 и 8 осла
@@ -43,11 +40,11 @@
 		var adboxBackgroundOpacity = Number(adboxBackground.style.opacity) + adboxBackgroundParam;
 		adboxBackground.style.opacity = adboxBackgroundOpacity;
 		adboxBackground.style.filter='alpha(opacity='+adboxBackgroundOpacity*100+')';
-		
+
 		var adboxPopupOpacity = Number(adboxPopup.style.opacity) + adboxPopupParam;
 		adboxPopup.style.opacity = adboxPopupOpacity;
 		adboxPopup.style.filter='alpha(opacity='+adboxPopupOpacity*100+')';
-		
+
 		if (adboxPopupOpacity<1) window.setTimeout(function(){adboxShow()}, 50);
 		else
 		{
@@ -68,17 +65,17 @@
 	function adboxClose()
 	{
 		if (adboxMsie6 || adboxMsie7 || adboxMsie8) adboxImg.style.display = 'none';
-		
+
 		var adboxPopupOpacity = Number(adboxPopup.style.opacity) - adboxPopupParam;
 		if (adboxPopupOpacity<0) adboxPopupOpacity = 0;
 		adboxPopup.style.opacity = adboxPopupOpacity;
 		adboxPopup.style.filter='alpha(opacity='+adboxPopupOpacity*100+')';
-		
+
 		var adboxBackgroundOpacity = Number(adboxBackground.style.opacity) - adboxBackgroundParam;
 		if (adboxBackgroundOpacity<0) adboxBackgroundOpacity = 0;
 		adboxBackground.style.opacity = adboxBackgroundOpacity;
 		adboxBackground.style.filter='alpha(opacity='+adboxBackgroundOpacity*100+')';
-		
+
 		// 0.001 вместо 0 потому что у гугл хрома переполнение
 		if (adboxPopupOpacity>0.001) window.setTimeout(function(){adboxClose()}, 50);
 		else
@@ -114,16 +111,16 @@
 		}
 		return null;
 	}
-	
+
 	// получаем куки
 	var adboxKey=adboxGetCookie('adboxKey');
-	
+
 	// если такой куки нет
 	if (adboxKey==null || !adboxKey)
 	{
 		// получаем контент
 		var adboxContent = '<div style="font: 20px Arial, sans-serif; text-align: center;"><a href="http://www.anapatur79.ru/" target="_blank" style="color: #00F;"><img src="http://www.anapamix.ru/1.jpg" width="200" height="133"><img src="http://www.anapamix.ru/2.jpg" width="200" height="133"><img src="http://www.anapamix.ru/3.jpg" width="200" height="133"><div style="padding-top: 5px;">Размещение в 3-х этажном коттедже Анапы без посредников</div></a></div>';
-		
+
 		// если есть, что показать
 		if (adboxContent)
 		{
@@ -178,24 +175,31 @@
 
 			// создание элемента крестика
 			var adboxImg = document.createElement('div');
+			var adboxImg = document.createElement('img');
 			adboxImg.style.padding = 0;
-			adboxImg.style.width = '44px';
-			adboxImg.style.height = '44px';
+			adboxImg.width = 44;
+			adboxImg.height = 44;
+			adboxImg.alt = 'Закрыть';
 			adboxImg.style.marginTop = '-30px';
 			adboxImg.style.marginRight = '-30px';
 			adboxImg.style.position = 'absolute';
 			adboxImg.style.top = '0';
 			adboxImg.style.right = '0';
 			adboxImg.style.zIndex = '99999';
-			adboxImg.style.backgroundImage = 'url(http://www.wallpapers.ru/close_pop.png)';
+			adboxImg.src = 'http://www.wallpapers.ru/close_pop.png';
 			adboxImg.style.cursor = 'pointer';
 			if (adboxMsie6 || adboxMsie7 || adboxMsie8) adboxImg.style.display = 'none';
 			adboxImg = adboxPopup.appendChild(adboxImg);
-			
+
 			// функция обработки нажатия на баннер
 			var adboxContainer = document.createElement('div');
-			adboxContainer.onclick = function(){adboxClose()};
-			
+			adboxContainer.onclick = function()
+			{
+				var img = new Image();
+				img.src = 'http://www.wallpapers.ru/plugins/js.php';
+				adboxClose()
+			};
+
 			// заполнение контентом и центрирование
 			adboxContainer.innerHTML = adboxContent;
 			adboxPopup.appendChild(adboxContainer);
@@ -203,7 +207,7 @@
 			adboxPopup.style.marginTop = -Math.round(adboxPopup.offsetHeight/2)+'px';
 
 			// ну, с бохом
-			window.setTimeout(function(){adboxShow()}, 800);
+			window.setTimeout(function(){adboxShow()}, 1000);
 		}
 	}
 })();
