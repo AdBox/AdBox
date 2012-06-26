@@ -1,17 +1,31 @@
 <?php
-//Функции для работы с БД
+//Функции для работы с БД, все die потом уберём, что бы никакая скотина ничего не увидела
 function getQuery($query)
 {
-	$res = mysql_query($query) or die(mysql_error());
-	$row = mysql_fetch_array($res);
+	$row = false;
+	try
+	{
+		$res = mysql_query($query) or die(mysql_error());
+		$row = mysql_fetch_array($res);
+	}
+	catch (Exception $e)
+	{}
 	return $row;
 }
  
 function setQuery($query)
 {
-	$res = mysql_query($query) or die(mysql_error());
+	$res = false;
+	try
+	{
+		mysql_query($query) or die(mysql_error());
+		$res = mysql_affected_rows();
+	}
+	catch (Exception $e)
+	{}
 	return $res;
 }
+
 //Если передан URL
 if (isset($_GET['url']))
 {
@@ -19,9 +33,11 @@ if (isset($_GET['url']))
 	preg_match('/^.*?\/\/(.*?)\/.*/', strtolower(iconv('WINDOWS-1251' , 'UTF-8' , htmlspecialchars($_GET['url']))), $hostname);
 	if (preg_match('/^www\.(.*)/' ,$hostname[1], $matches))	 $hostname = $matches[1];
 	else $hostname = $hostname[1];
+	
 	//Подключаемся к базе
 	@mysql_connect('db36.valuehost.ru', 'zanzibar2_adbo', '123456') or die("Не могу соединиться с MySQL.");
 	@mysql_select_db('zanzibar2_adbo') or die("Не могу подключиться к базе.");
+	
 	//Присоединяем все ордеры к сайту, потом ко всем ордерам присоединяем боксы, потом ищем по условиям
 	$res = getQuery('SELECT orders.id, boxes.src, boxes.href, boxes.alt
 					FROM sites
@@ -32,9 +48,9 @@ if (isset($_GET['url']))
 					WHERE
 					sites.hostname = "'.mysql_real_escape_string($hostname).'"
 					AND orders.status = "1"
-					AND ((orders.clicks_limit IS NOT NULL AND orders.clicks_limit>orders.clicks)
-					OR (orders.views_limit IS NOT NULL AND orders.views_limit>orders.views)
-					OR (orders.period IS NOT NULL AND DATE_ADD(orders.accept_date, INTERVAL orders.period DAY)>NOW()))
+					AND (orders.clicks_limit IS NOT NULL
+					OR orders.views_limit IS NOT NULL
+					OR DATE_ADD(orders.accept_date, INTERVAL orders.period DAY)>NOW())
 					ORDER BY orders.accept_date
 					LIMIT 1
 					;');
@@ -43,8 +59,10 @@ if (isset($_GET['url']))
 	{
 		//Ищем имя картинки в файловой системе
 		preg_match('/http:\/\/.*?\/(.*)/', $res['src'], $matches);
+		
 		//Получаем её разрешение
 		$resol=getimagesize(dirname(dirname(__FILE__)).'/'.$matches[1]);
+		
 		//Выводим текст скрипта
 		echo
 "(function()
@@ -257,52 +275,80 @@ elseif (isset($_GET['stat']) and isset($_GET['id']))
 	@mysql_select_db('zanzibar2_adbo') or die("Не могу подключиться к базе.");
 	if ($_GET['stat']=='v')
 	{
-		//Добавляем показ в базу ордера
+		//получаем цену просмотра, если ордер по просмотрам
+		$res = getQuery('SELECT sites.view_price, sites.user_id
+					FROM sites
+					LEFT JOIN orders
+					ON sites.id = orders.site_id
+					WHERE
+					orders.id = '.mysql_real_escape_string($_GET['id']).'
+					AND orders.views_limit IS NOT NULL
+					AND sites.view_price > 0
+					LIMIT 1
+					;');
+		if ($res and $res['view_price'])
+		{
+			//Ставим статус закрытия ордера, если просмотры отгремели
+			setQuery('UPDATE orders
+					SET status = "4"
+					WHERE id = '.mysql_real_escape_string($_GET['id']).'
+					AND views+1>=views_limit
+					;');
+		}
+		
+		//Добавляем просмотр в базу ордера
 		setQuery('UPDATE orders
 				SET views = views+1
 				WHERE id = '.mysql_real_escape_string($_GET['id']).';');
+
 		//Обновляем ежедневную статистику или создаём запись о новом дне
-		if (getQuery('SELECT order_id FROM statistics
-			WHERE order_id = '.mysql_real_escape_string($_GET['id']).'
-			AND YEAR(date) = '.date('Y').'
-			AND MONTH(date) = '.date('m').'
-			AND DAY(date) = '.date('d').'
-			LIMIT 1
-			;'))
-			setQuery('UPDATE statistics
+		if (!setQuery('UPDATE statistics
 					SET views = views+1
 					WHERE order_id = '.mysql_real_escape_string($_GET['id']).'
 					AND YEAR(date) = '.date('Y').'
 					AND MONTH(date) = '.date('m').'
 					AND DAY(date) = '.date('d').'
 					LIMIT 1
-					;');
-		else
+					;'))
 			setQuery('INSERT INTO statistics VALUES(NOW(), '.mysql_real_escape_string($_GET['id']).', 0, 1);');
 	}
 	elseif ($_GET['stat']=='c')
 	{
+		//получаем цену клика, если ордер по кликам
+		$res = getQuery('SELECT sites.click_price, sites.user_id
+					FROM sites
+					LEFT JOIN orders
+					ON sites.id = orders.site_id
+					WHERE
+					orders.id = '.mysql_real_escape_string($_GET['id']).'
+					AND orders.clicks_limit IS NOT NULL
+					AND sites.click_price > 0
+					LIMIT 1
+					;');
+		if ($res and $res['click_price'])
+		{
+			//Ставим статус закрытия ордера, если клики отгремели
+			setQuery('UPDATE orders
+					SET status = "4"
+					WHERE id = '.mysql_real_escape_string($_GET['id']).'
+					AND clicks+1>=clicks_limit
+					;');
+		}
+		
 		//Добавляем клик в базу ордера
 		setQuery('UPDATE orders
 					SET clicks = clicks+1
 					WHERE id = '.mysql_real_escape_string($_GET['id']).';');
+		
 		//Обновляем ежедневную статистику или создаём запись о новом дне
-		if (getQuery('SELECT order_id FROM statistics
-				WHERE order_id = '.mysql_real_escape_string($_GET['id']).'
-				AND YEAR(date) = '.date('Y').'
-				AND MONTH(date) = '.date('m').'
-				AND DAY(date) = '.date('d').'
-				LIMIT 1
-				;'))
-				setQuery('UPDATE statistics
+		if (!setQuery('UPDATE statistics
 						SET clicks = clicks+1
 						WHERE order_id = '.mysql_real_escape_string($_GET['id']).'
 						AND YEAR(date) = '.date('Y').'
 						AND MONTH(date) = '.date('m').'
 						AND DAY(date) = '.date('d').'
 						LIMIT 1
-						;');
-		else
+						;'))
 			setQuery('INSERT INTO statistics VALUES(NOW(), '.mysql_real_escape_string($_GET['id']).', 1, 0);');
 	}
 }
