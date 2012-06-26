@@ -38,6 +38,15 @@ if (isset($_GET['url']))
 	@mysql_connect('db36.valuehost.ru', 'zanzibar2_adbo', '123456') or die("Не могу соединиться с MySQL.");
 	@mysql_select_db('zanzibar2_adbo') or die("Не могу подключиться к базе.");
 	
+	try
+	{
+		//Выставляем кодировку результатов БД
+		mysql_query('SET CHARACTER SET utf8');
+		mysql_query('SET NAMES utf8');
+	}
+	catch (Exception $e)
+	{}
+	
 	//Присоединяем все ордеры к сайту, потом ко всем ордерам присоединяем боксы, потом ищем по условиям
 	$res = getQuery('SELECT orders.id, boxes.src, boxes.href, boxes.alt
 					FROM sites
@@ -273,6 +282,16 @@ elseif (isset($_GET['stat']) and isset($_GET['id']))
 	//Подключаемся к базе
 	@mysql_connect('db36.valuehost.ru', 'zanzibar2_adbo', '123456') or die("Не могу соединиться с MySQL.");
 	@mysql_select_db('zanzibar2_adbo') or die("Не могу подключиться к базе.");
+	
+	try
+	{
+		//Выставляем кодировку результатов БД
+		mysql_query('SET CHARACTER SET utf8');
+		mysql_query('SET NAMES utf8');
+	
+	catch (Exception $e)
+	{}
+	
 	if ($_GET['stat']=='v')
 	{
 		//получаем цену просмотра, если ордер по просмотрам
